@@ -118,7 +118,7 @@ internal let animationDuration = CFTimeInterval(0.3)
         
         on = false
         
-        tapGestureRecognizer = UITapGestureRecognizer(target: self, action: "handleTapGesture:")
+        tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(PMZSwitch.handleTapGesture(_:)))
         tapGestureRecognizer.delegate = self
         self.addGestureRecognizer(tapGestureRecognizer)
     }
