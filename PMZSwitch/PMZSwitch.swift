@@ -9,52 +9,38 @@
 import QuartzCore
 import UIKit
 
-internal let defaultFrame = CGRectMake(0, 0, 50, 30)
-internal let borderMargin = CGFloat(17)
-internal let animationDuration = CFTimeInterval(0.3)
+internal let defaultFrame = CGRect(x: 0, y: 0, width: 50, height: 30)
+internal let borderMargin: CGFloat = 17
+internal let animationDuration: CFTimeInterval = 0.3
 
-@IBDesignable @objc public class PMZSwitch : UIControl, UIGestureRecognizerDelegate {
-
+@IBDesignable @objc public class PMZSwitch: UIControl, UIGestureRecognizerDelegate {
+    
     // MARK: - Properties -
     // MARK: public
     /**
      *   Set (without animation) whether the switch is on or off
      */
     @IBInspectable public var on: Bool {
-        get {
-            return switchValue
-        }
+        get { return switchValue }
         set {
             switchValue = newValue
-            self.setOn(newValue, animated: false)
+            self.setOn(isOn: newValue, animated: false)
         }
     }
     
     @IBInspectable public var thumbTintColor: UIColor {
-        get {
-            return thumbView.thumbTintColor
-        }
-        set {
-            thumbView.thumbTintColor = newValue
-        }
+        get { return thumbView.thumbTintColor }
+        set { thumbView.thumbTintColor = newValue }
     }
     
     @IBInspectable public var onThumbTintColor: UIColor {
-        get {
-            return thumbView.onThumbTintColor
-        }
-        set {
-            thumbView.onThumbTintColor = newValue
-        }
+        get { return thumbView.onThumbTintColor }
+        set { thumbView.onThumbTintColor = newValue }
     }
     
     @IBInspectable public var shadowColor: UIColor {
-        get {
-            return thumbView.shadowColor
-        }
-        set {
-            thumbView.shadowColor = newValue
-        }
+        get { return thumbView.shadowColor }
+        set { thumbView.shadowColor = newValue }
     }
     
     // MARK: internal
@@ -72,12 +58,12 @@ internal let animationDuration = CFTimeInterval(0.3)
     private var maxThumbOffset: CGFloat {
         return self.bounds.width - thumbView.frame.width - borderMargin * 2
     }
-
+    
     private var originalThumbRect: CGRect {
-        let squareRect = CGRectMake(0, 0, self.bounds.height, self.bounds.height)
-        return CGRectInset(squareRect, borderMargin, borderMargin)
+        let squareRect = CGRect(x: 0, y: 0, width: self.bounds.height, height: self.bounds.height)
+        return squareRect.inset(by: UIEdgeInsets(top: borderMargin, left: borderMargin, bottom: borderMargin, right: borderMargin))
     }
-
+    
     
     // MARK: - Lifecycle -
     /**
@@ -94,7 +80,7 @@ internal let animationDuration = CFTimeInterval(0.3)
     }
     
     override public init(frame: CGRect) {
-        let initialFrame = CGRectIsEmpty(frame) ? defaultFrame : frame
+        let initialFrame = frame.isEmpty ? defaultFrame : frame
         super.init(frame: initialFrame)
         
         self.setup()
@@ -106,9 +92,9 @@ internal let animationDuration = CFTimeInterval(0.3)
     private func setup() {
         // background
         backgroundView = UIView(frame: self.bounds)
-        backgroundView.backgroundColor = UIColor.whiteColor()
+        backgroundView.backgroundColor = .white
         backgroundView.layer.cornerRadius = self.frame.height * 0.5
-        backgroundView.userInteractionEnabled = false
+        backgroundView.isUserInteractionEnabled = false
         backgroundView.clipsToBounds = true
         self.addSubview(backgroundView)
         
@@ -118,84 +104,70 @@ internal let animationDuration = CFTimeInterval(0.3)
         
         on = false
         
-        tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(PMZSwitch.handleTapGesture(_:)))
+        tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleTapGesture(_:)))
         tapGestureRecognizer.delegate = self
         self.addGestureRecognizer(tapGestureRecognizer)
     }
     
     // MARK: - Tap gesture recognizer handler -
     
-    func handleTapGesture(gestureRecognizer: UITapGestureRecognizer) {
-        if ignoreTap {
-            return
-        }
+    @objc func handleTapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
+        guard !ignoreTap else { return }
         
-        if gestureRecognizer.state == .Ended {
-            thumbView.toggle(true)
-            setOn(!on, animated: true)
+        if gestureRecognizer.state == .ended {
+            thumbView.toggle(animated: true)
+            setOn(isOn: !on, animated: true)
         }
     }
-
+    
     // MARK: - UIControl tracking methods -
     
-    override public func beginTrackingWithTouch(touch: UITouch, withEvent event: UIEvent?) -> Bool {
-        super.beginTrackingWithTouch(touch, withEvent: event)
+    override public func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+        super.beginTracking(touch, with: event)
         
-        startTrackingPoint = touch.locationInView(self)
+        startTrackingPoint = touch.location(in: self)
         startThumbFrame = thumbView.frame
         thumbView.startTracking()
-
+        
         return true
     }
     
-    override public func continueTrackingWithTouch(touch: UITouch, withEvent event: UIEvent?) -> Bool {
-        super.continueTrackingWithTouch(touch, withEvent: event)
+    override public func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+        super.continueTracking(touch, with: event)
         ignoreTap = true
-
+        
         // Get touch location
-        let lastPoint = touch.locationInView(self)
+        let lastPoint = touch.location(in: self)
         let thumbMinPosition = originalThumbRect.origin.x
         let thumbMaxPosition = originalThumbRect.origin.x + maxThumbOffset
         let touchXOffset = lastPoint.x - startTrackingPoint.x
         
-        var desiredFrame = CGRectOffset(startThumbFrame, touchXOffset, 0)
+        var desiredFrame = startThumbFrame.offsetBy(dx: touchXOffset, dy: 0)
         desiredFrame.origin.x = min(max(desiredFrame.origin.x, thumbMinPosition), thumbMaxPosition)
         thumbView.frame = desiredFrame
-
-        if on { // left <- right
-            thumbView.animationProgress = (thumbMaxPosition - desiredFrame.origin.x) / maxThumbOffset
-        } else { // left -> right
-            thumbView.animationProgress = (desiredFrame.origin.x - thumbMinPosition) / maxThumbOffset
-        }
+        
+        //                                 // right -> left
+        thumbView.animationProgress = on ? (thumbMaxPosition - desiredFrame.origin.x) / maxThumbOffset :
+            //                             // left -> right
+            (desiredFrame.origin.x - thumbMinPosition) / maxThumbOffset
         
         return true
     }
     
-    override public func endTrackingWithTouch(touch: UITouch?, withEvent event: UIEvent?) {
-        super.endTrackingWithTouch(touch, withEvent: event)
+    override public func endTracking(_ touch: UITouch?, with event: UIEvent?) {
+        super.endTracking(touch, with: event)
         
-        if thumbView.center.x > self.bounds.midX {
-            setOn(true, animated: true)
-        }
-        else {
-            setOn(false, animated: true)
-        }
+        thumbView.center.x > self.bounds.midX ? setOn(isOn: true, animated: true) : setOn(isOn: false, animated: true)
         
         ignoreTap = false
     }
     
-    override public func cancelTrackingWithEvent(event: UIEvent?) {
-        super.cancelTrackingWithEvent(event)
-        if !ignoreTap {
-            return
-        }
-
+    override public func cancelTracking(with event: UIEvent?) {
+        super.cancelTracking(with: event)
+        guard ignoreTap else { return }
+        
         // just animate back to the original value
-        if on {
-            showOn(true)
-        } else {
-            showOff(true)
-        }
+        on ? showOn(animated: true) : showOff(animated: true)
         ignoreTap = false
     }
     
@@ -205,36 +177,30 @@ internal let animationDuration = CFTimeInterval(0.3)
      */
     public func setOn(isOn: Bool, animated: Bool) {
         switchValue = isOn
-        
-        if on {
-            showOn(animated)
-        }
-        else {
-            showOff(animated)
-        }
+        on ? showOn(animated: animated) : showOff(animated: animated)
     }
     
     /**
      *   Detects whether the switch is on or off
      *
-     *	 @return	Bool true if switch is on, false otherwise
+     *     @return    Bool true if switch is on, false otherwise
      */
-    public func isOn() -> Bool {
+    public var isOn: Bool {
         return on
     }
     
     // MARK: - Private methods -
-
+    
     /**
      *   Updates the looks of the switch to be in the on position
      *   optionally make it animated
      */
     private func showOn(animated: Bool) {
-        thumbView.endTracking(true)
-
-        UIView.animateWithDuration(animationDuration, delay: 0.0, options: [UIViewAnimationOptions.CurveEaseIn, UIViewAnimationOptions.BeginFromCurrentState], animations: {
-            self.thumbView.frame = CGRectOffset(self.originalThumbRect, self.maxThumbOffset, 0)
-        }, completion: nil)
+        thumbView.endTracking(isOn: true)
+        
+        UIView.animate(withDuration: animated ? animationDuration : 0, delay: 0, options: [.curveEaseIn, .beginFromCurrentState], animations: {
+            self.thumbView.frame = self.originalThumbRect.offsetBy(dx: self.maxThumbOffset, dy: 0)
+        })
     }
     
     /**
@@ -242,10 +208,10 @@ internal let animationDuration = CFTimeInterval(0.3)
      *   optionally make it animated
      */
     private func showOff(animated: Bool) {
-        thumbView.endTracking(false)
-
-        UIView.animateWithDuration(animationDuration, delay: 0.0, options: [UIViewAnimationOptions.CurveEaseIn, UIViewAnimationOptions.BeginFromCurrentState], animations: {
+        thumbView.endTracking(isOn: false)
+        
+        UIView.animate(withDuration: animated ? animationDuration : 0, delay: 0, options: [.curveEaseIn, .beginFromCurrentState], animations: {
             self.thumbView.frame = self.originalThumbRect
-        }, completion: nil)
+        })
     }
 }
