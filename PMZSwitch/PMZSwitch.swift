@@ -146,10 +146,11 @@ internal let animationDuration: CFTimeInterval = 0.3
         desiredFrame.origin.x = min(max(desiredFrame.origin.x, thumbMinPosition), thumbMaxPosition)
         thumbView.frame = desiredFrame
         
-        //                                 // right -> left
-        thumbView.animationProgress = on ? (thumbMaxPosition - desiredFrame.origin.x) / maxThumbOffset :
-            //                             // left -> right
-            (desiredFrame.origin.x - thumbMinPosition) / maxThumbOffset
+        if on { // left <- right
+            thumbView.animationProgress = (thumbMaxPosition - desiredFrame.origin.x) / maxThumbOffset
+        } else { // left -> right
+            thumbView.animationProgress = (desiredFrame.origin.x - thumbMinPosition) / maxThumbOffset
+        }
         
         return true
     }
